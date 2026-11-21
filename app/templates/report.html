@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Laporan insiden</title>
+<style>
+  body { font: 14px/1.5 "Segoe UI", system-ui, sans-serif; color: #16212c; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 22px; } h2 { font-size: 17px; margin-top: 1.6rem; } h3 { font-size: 15px; margin-bottom: .2rem; }
+  table { border-collapse: collapse; } td, th { border: 1px solid #c9d1d9; padding: 4px 10px; text-align: left; }
+  pre { background: #f2f4f6; padding: 8px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
+  .meta { color: #5a6876; } .inc { break-inside: avoid; border-top: 1px solid #d3dae1; padding-top: .6rem; }
+  @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+<p class="noprint">Tekan Ctrl+P untuk mencetak atau menyimpan sebagai PDF.</p>
+<h1>Laporan insiden keamanan</h1>
+<p class="meta">Sumber: {{ upload.filename }} (format {{ upload.format }}). Dianalisis {{ upload.uploaded_at }}. Laporan dibuat {{ now }}.<br>
+Baris log {{ upload.total_lines }}, event terbaca {{ upload.events }}, baris tidak valid {{ upload.invalid_lines }}.
+Total alert {{ alerts|length }}, total insiden {{ incidents|length }}.</p>
+<h2>Ringkasan severity</h2>
+<table><tr>{% for s in severities %}<th>{{ s }}</th>{% endfor %}</tr>
+<tr>{% for s in severities %}<td>{{ sev.get(s, 0) }}</td>{% endfor %}</tr></table>
+<h2>Insiden</h2>
+{% if not incidents %}<p>Tidak ada alert pada log ini.</p>{% endif %}
+{% for inc in incidents %}
+<div class="inc">
+<h3>{{ loop.index }}. {{ inc.src_ip }} - {{ inc.severity }} (skor {{ inc.score }})</h3>
+<p class="meta">{{ inc.first_seen }} sampai {{ inc.last_seen }} | Status: {{ inc.status }} | MITRE: {{ inc.mitre|join(', ') or '-' }}</p>
+<ul>{% for a in inc.alerts %}<li><b>{{ a.rule_id }} {{ a.rule_name }}</b> ({{ a.severity }}, {{ a.count }} kejadian): {{ a.detail }}</li>{% endfor %}</ul>
+<p><b>Rekomendasi</b></p>
+<ol>{% for r in inc.recommendations %}<li>{{ r }}</li>{% endfor %}</ol>
+{% if inc.alerts[0].evidence %}<p><b>Contoh bukti</b></p><pre>{{ inc.alerts[0].evidence[:3]|join('\n') }}</pre>{% endif %}
+</div>
+{% endfor %}
+</body>
+</html>

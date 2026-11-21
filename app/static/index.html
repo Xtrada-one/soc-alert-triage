@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOC Alert Triage Dashboard</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Triase alert</h1>
+      <p class="sub">Unggah log keamanan, lihat dulu insiden yang paling mendesak.</p>
+    </div>
+    <form id="uploadForm" class="uploader">
+      <label class="file">Log (bisa lebih dari satu)
+        <input type="file" id="file" multiple required>
+      </label>
+      <label>Format
+        <select id="format">
+          <option value="auto">Deteksi otomatis</option>
+          <option value="ssh">SSH auth.log</option>
+          <option value="web">Access log web</option>
+          <option value="suricata">Suricata eve.json</option>
+          <option value="wazuh">Wazuh alerts</option>
+        </select>
+      </label>
+      <button type="submit" class="primary">Analisis log</button>
+    </form>
+  </header>
+
+  <section class="toolbar">
+    <label>Hasil analisis <select id="uploadSelect"></select></label>
+    <button id="delUpload" class="ghost" type="button">Hapus hasil ini</button>
+    <span class="spacer"></span>
+    <label>Coba skenario uji <select id="scenarioSelect"></select></label>
+    <button id="runScenario" type="button">Jalankan skenario</button>
+  </section>
+  <div id="notice" role="status" aria-live="polite" class="notice" hidden></div>
+
+  <main>
+    <section id="strip" class="strip-wrap" aria-label="Ringkasan severity"></section>
+
+    <section class="grid2">
+      <div class="panel"><h2>Alert dari waktu ke waktu</h2><div id="timeline"></div></div>
+      <div class="panel"><h2>IP dengan prioritas tertinggi</h2><div id="topips"></div></div>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="incidents" aria-selected="true">Insiden</button>
+      <button role="tab" data-tab="alerts" aria-selected="false">Semua alert</button>
+      <button role="tab" data-tab="whitelist" aria-selected="false">Whitelist IP</button>
+      <span class="spacer"></span>
+      <a id="mdLink" class="linkbtn" href="/api/report.md">Unduh laporan (.md)</a>
+      <a id="htmlLink" class="linkbtn" href="/report" target="_blank" rel="noopener">Laporan cetak</a>
+    </nav>
+
+    <section id="tab-incidents" class="panel"></section>
+
+    <section id="tab-alerts" class="panel" hidden>
+      <div class="filters">
+        <label>Severity <select id="fSeverity"><option value="">Semua</option></select></label>
+        <label>Status <select id="fStatus"><option value="">Semua</option></select></label>
+        <label>Cari <input id="fQuery" type="search" placeholder="IP, rule, atau kata kunci"></label>
+      </div>
+      <div id="alertsTable"></div>
+    </section>
+
+    <section id="tab-whitelist" class="panel" hidden>
+      <p class="hint">IP di whitelist diabaikan pada analisis berikutnya. Hasil analisis yang sudah ada tidak berubah.</p>
+      <form id="wlForm" class="filters">
+        <label>Alamat IP <input id="wlIp" required placeholder="192.168.1.10"></label>
+        <label>Catatan <input id="wlNote" placeholder="mis. scanner internal"></label>
+        <button type="submit" class="primary">Tambah</button>
+      </form>
+      <div id="wlTable"></div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

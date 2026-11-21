@@ -1,0 +1,111 @@
+# Aturan deteksi. Ubah di sini tanpa menyentuh kode Python.
+# type: threshold | sequence | pattern | distinct_ports | native | correlation
+rules:
+  - id: R01
+    name: Brute force SSH
+    type: threshold
+    match: {event_type: ssh_fail}
+    threshold: 10
+    window_seconds: 300
+    severity: High
+    mitre: [T1110]
+    detail: "{n} login SSH gagal dalam {window} detik"
+    recommendation: "Blokir IP sumber di firewall atau fail2ban, aktifkan login SSH hanya dengan key, dan batasi akses SSH ke IP tertentu."
+
+  - id: R02
+    name: Brute force berhasil (login sukses setelah banyak gagal)
+    type: sequence
+    fail_event: ssh_fail
+    success_event: ssh_success
+    fail_threshold: 10
+    window_seconds: 300
+    severity: Critical
+    mitre: [T1110, T1078]
+    detail: "{n} kegagalan lalu login sukses sebagai '{user}'"
+    recommendation: "Anggap akun terkompromi: reset password dan cabut sesi aktif akun tersebut, periksa aktivitas setelah login, lalu blokir IP sumber."
+
+  - id: R03
+    name: SQL Injection
+    type: pattern
+    field: request
+    event_type: http_request
+    patterns:
+      - '\bunion\s+(?:all\s+)?select\b'
+      - '[''"]\s*or\s+[''"]?\w+[''"]?\s*=\s*[''"]?\w+'
+      - '\bor\s+1\s*=\s*1\b'
+      - '\bsleep\s*\(\s*\d+\s*\)'
+      - '\bbenchmark\s*\('
+      - ';\s*drop\s+table'
+      - 'information_schema'
+    severity: High
+    mitre: [T1190]
+    detail: "{n} request cocok pola SQL injection"
+    recommendation: "Pastikan query memakai prepared statement, pasang WAF, dan periksa apakah ada data yang terbaca (cek status 200 dan ukuran respons)."
+
+  - id: R04
+    name: Cross-Site Scripting (XSS)
+    type: pattern
+    field: request
+    event_type: http_request
+    patterns:
+      - '<\s*script'
+      - '\bon(?:error|load|mouseover)\s*='
+      - 'javascript\s*:'
+    severity: Medium
+    mitre: [T1190]
+    detail: "{n} request cocok pola XSS"
+    recommendation: "Lakukan output encoding dan validasi input pada parameter yang dituju, serta aktifkan header Content-Security-Policy."
+
+  - id: R05
+    name: Path traversal
+    type: pattern
+    field: request
+    event_type: http_request
+    patterns:
+      - '\.\./'
+      - '\.\.\\'
+      - '/etc/passwd'
+    severity: High
+    mitre: [T1190]
+    detail: "{n} request cocok pola path traversal"
+    recommendation: "Validasi dan normalisasi path file di sisi server, batasi akses file ke direktori tertentu, dan periksa apakah file sensitif terbaca."
+
+  - id: R06
+    name: Port scan
+    type: distinct_ports
+    match: {event_types: [flow, ids_alert]}
+    threshold: 15
+    window_seconds: 60
+    severity: Medium
+    mitre: [T1046]
+    detail: "{n} port berbeda diakses dalam {window} detik"
+    recommendation: "Blokir atau rate-limit IP sumber, tutup port yang tidak diperlukan, dan awasi tahap serangan lanjutan dari IP yang sama."
+
+  - id: R07
+    name: Tools scanner/eksploitasi terdeteksi
+    type: pattern
+    field: user_agent
+    event_type: http_request
+    decode: false
+    patterns:
+      - 'sqlmap|nikto|nmap|nessus|acunetix|masscan|dirbuster|gobuster'
+    severity: Medium
+    mitre: [T1595]
+    detail: "{n} request memakai user-agent tools pemindai"
+    recommendation: "Blokir user-agent dan IP sumber di web server/WAF, lalu periksa request lain dari IP yang sama."
+
+  - id: R08
+    name: Serangan multi-tahap (korelasi)
+    type: correlation
+    min_rules: 3
+    severity: Critical
+    mitre: []
+    recommendation: "Tangani sebagai insiden prioritas tertinggi: isolasi atau blokir IP sumber, telusuri seluruh aktivitasnya di semua sumber log, dan periksa kemungkinan akses yang sudah berhasil."
+
+  - id: R09
+    name: Alert bawaan sensor
+    type: native
+    severity: Low
+    mitre: []
+    detail: "Alert dari sensor"
+    recommendation: "Tinjau alert ini bersama konteks lain dari IP yang sama; naikkan prioritas bila muncul bersama rule lain."
